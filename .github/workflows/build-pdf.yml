@@ -1,4 +1,4 @@
-name: Build PDFs
+name: Build PDFs (Docker pandoc)
 
 on:
   push:
@@ -9,28 +9,25 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get update -y
-        sudo apt-get install -y pandoc texlive-xetex texlive-fonts-recommended texlive-latex-extra fonts-dejavu-core
+      - name: Show repo files
+        run: ls -la
 
-    - name: Build main PDF
-      run: |
-        pandoc vim-9.1-reference-it.md -o "Vim-9.1-Reference-IT.pdf" \
-          --pdf-engine=xelatex -V geometry:margin=1in -V mainfont="DejaVu Sans Mono" --highlight-style=tango
+      - name: Build PDFs using pandoc/latex Docker image
+        env:
+          WORKDIR: ${{ github.workspace }}
+        run: |
+          # run pandoc inside the pandoc/latex docker image, mounting the repo
+          docker run --rm -v "${GITHUB_WORKSPACE}:/data" -w /data pandoc/latex:3.1 \
+            sh -c "pandoc vim-9.1-reference-it.md -o 'Vim-9.1-Reference-IT.pdf' --pdf-engine=xelatex -V geometry:margin=1in -V mainfont='DejaVu Sans Mono' --highlight-style=tango && \
+                   pandoc vim-cheatsheet-it.md -o 'Vim-Cheatsheet-IT.pdf' --pdf-engine=xelatex -V geometry:margin=0.7in -V mainfont='DejaVu Sans Mono'"
 
-    - name: Build cheat-sheet PDF
-      run: |
-        pandoc vim-cheatsheet-it.md -o "Vim-Cheatsheet-IT.pdf" \
-          --pdf-engine=xelatex -V geometry:margin=0.7in -V mainfont="DejaVu Sans Mono"
-
-    - name: Upload PDFs as artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: vim-pdfs
-        path: |
-          Vim-9.1-Reference-IT.pdf
-          Vim-Cheatsheet-IT.pdf
+      - name: Upload PDFs
+        uses: actions/upload-artifact@v4
+        with:
+          name: vim-pdfs
+          path: |
+            Vim-9.1-Reference-IT.pdf
+            Vim-Cheatsheet-IT.pdf
